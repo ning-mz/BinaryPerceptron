@@ -6,22 +6,21 @@ Created on Mon Mar  9 15:07:09 2020
 
 """
 import numpy as np
+import random
+
 #Open a file given a filename
 def getFileData(fileName):  
     with open(fileName) as file:
         data = file.readlines()
         return data
-        
+
 #return a set of N randomised nums to inititialise weights (makes flexible)
 def initWeights(n):
     return 0
-        
-
-#Init weights to 1
-weights = [1,1,1,1]
+       
 
 #Set Learning Rate
-lr = 0.01
+lr = 0.001
 #Set Training Iterations
 ti = 20
 
@@ -34,20 +33,122 @@ def processData(data):
         processed += [stripped]
     return processed
 
+# make a prediction, returns 1 or 0
+def predict(row,weights):
+    # set weighted sum as bias weight to start for each row
+    weightedSum = weights[0]
+    for i in range(len(row)-1):
+        weightedSum += weights[i+1] * float(row[i])
+    return 1.0 if weightedSum >= 1.0 else -1.0    
 
-def train(weights, learningRate):
-#   set up hyperparameters
-    w = weights
-    lr = learningRate
-    bias = 1
-#    get training data
-    tData = processedData(getFileData("train.data"))
+# given a scenario(a,b,c), remove unnecessary data  
+def splitData(scenario, data):
+    scn = scenario
+    print(scn, "\n")
+    newdata=[]
+    if scn == "a":
+        for row in data:
+            if row[4] =='class-1':
+                row[4] = 1.0
+                newdata+=[row]
+            elif row[4] == 'class-2':
+                row[4] = -1.0
+                newdata+= [row]
+        return newdata
     
-    for line in tData:
-#        Check activation
-#        Check class
-#        Update Weights
+    elif scn == "b":
+        for row in data:
+            if row[4] == 'class-2':
+                row[4] = 1.0
+                newdata+=[row]
+            elif row[4] == 'class-3':
+                row[4] = -1.0
+                newdata+=[row]
+        return newdata
+    
+    elif scn == "c":
+        for row in data:
+            if row[4] =='class-1':
+                row[4] = -1.0
+                newdata+=[row]
+            elif row[4] == 'class-3':
+                row[4] = 1.0
+                newdata+=[row]
+        return newdata
+    
+    
+def train(learningRate,epochs,scenario):
+#   set up hyperparameters
+    scn = scenario
+    w = [0.1,0.1,0.1,0.1]
+    lr = learningRate
+    bias = 0.1
+    e = epochs
+    iteration = 0
+    
+#   get training data and remove uneccesary classes, shuffle
+    tData = processData(getFileData("train.data"))
+    tData = splitData(scn, tData)
+    random.shuffle(tData)
+    
+#   insert bias such that weights = [bias, w1, w2, w3, w4]
+    w.insert(0,bias)
+    print(w)
+#   While iterations < number of epochs
+    while iteration < e:
+        # sum errors for each epoch 
+        numOfErrors = 0
+        # for each row in training data make a prediction 
+        # and update weights if there is an error 
+        for line in tData:
+            prediction = predict(line, w)
+            error = line[len(line)-1] - prediction
+            if error!= 0:
+                numOfErrors +=1
+            # update bias
+            w[0] = w[0] + (lr * error)
+            # update by adding learning rate*error*input to existing weights
+            for i in range(len(line)-1):
+                w[i+1]=w[i+1] +  lr * error * float(line[i])
+        print(numOfErrors, "prediction errors in epoch ", iteration)
+        iteration += 1
+    return w 
         
     
-    
-model = train()
+def test(modelWeights, scenario):
+    testData = processData(getFileData("test.data"))
+    testData = splitData(scenario, testData)
+    random.shuffle(testData)
+    predictions = []
+    actual = []
+    for row in testData:
+        p = predict(row, modelWeights)
+        predictions.append(p)
+        actual.append(row[4])
+    accuracy= calculateAccuracy(predictions, actual)
+    # print("predictions",predictions, "\n")
+    # print("actual",actual,"\n")
+    print("accuracy is ",accuracy,"%")
+    return predictions
+
+def calculateAccuracy(predictions, actual):
+    truepositive = 0
+    for i in range(len(predictions)):
+        if predictions[i] == actual[i]:
+            truepositive += 1
+    return(truepositive/float(len(predictions)))*100
+        
+modela = train(lr, ti,"a")
+modelb = train(lr,ti,"b")
+modelc = train(lr,ti,"c")
+
+print(modela, "are the weights for model a \n")
+print(modelb, "are the weights for model b \n")
+print(modelc, "are the weights for model c")
+
+test(modela, "a")
+test(modelb, "b")
+test(modelc, "c")
+
+# 1 vs rest, take 3 classifiers and return maxprobability
+
