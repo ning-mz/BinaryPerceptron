@@ -20,7 +20,7 @@ def initWeights(n):
        
 
 #Set Learning Rate
-lr = 0.001
+lr = 0.01
 #Set Training Iterations
 ti = 20
 
@@ -44,7 +44,7 @@ def predict(row,weights):
 # given a scenario(a,b,c), remove unnecessary data  
 def splitData(scenario, data):
     scn = scenario
-    print(scn, "\n")
+    # print(scn, "\n")
     newdata=[]
     if scn == "a":
         for row in data:
@@ -93,7 +93,7 @@ def train(learningRate,epochs,scenario):
     
 #   insert bias such that weights = [bias, w1, w2, w3, w4]
     w.insert(0,bias)
-    print(w)
+
 #   While iterations < number of epochs
     while iteration < e:
         # sum errors for each epoch 
@@ -110,7 +110,7 @@ def train(learningRate,epochs,scenario):
             # update by adding learning rate*error*input to existing weights
             for i in range(len(line)-1):
                 w[i+1]=w[i+1] +  lr * error * float(line[i])
-        print(numOfErrors, "prediction errors in epoch ", iteration)
+        # print(numOfErrors, "prediction errors in epoch ", iteration)
         iteration += 1
     return w 
         
@@ -128,23 +128,19 @@ def test(modelWeights, scenario):
     accuracy= calculateAccuracy(predictions, actual)
     # print("predictions",predictions, "\n")
     # print("actual",actual,"\n")
-    print("accuracy is ",accuracy,"%")
+    print("Test dataset accuracy for scenario" ,scenario," is ",accuracy,"%")
     return predictions
 
 def calculateAccuracy(predictions, actual):
-    truepositive = 0
+    positives = 0
     for i in range(len(predictions)):
         if predictions[i] == actual[i]:
-            truepositive += 1
-    return(truepositive/float(len(predictions)))*100
+            positives += 1
+    return(positives/float(len(predictions)))*100
         
 modela = train(lr, ti,"a")
 modelb = train(lr,ti,"b")
 modelc = train(lr,ti,"c")
-
-print(modela, "are the weights for model a \n")
-print(modelb, "are the weights for model b \n")
-print(modelc, "are the weights for model c")
 
 test(modela, "a")
 test(modelb, "b")
@@ -152,3 +148,24 @@ test(modelc, "c")
 
 # 1 vs rest, take 3 classifiers and return maxprobability
 
+def oneVsRest():
+    testData = processData(getFileData("test.data"))
+    random.shuffle(testData)
+    predictions=[]
+    actual=[]
+    for row in testData: 
+        class1 = predict(row,modela)
+        class2 = predict(row,modelb)
+        if class1 == 1.0:
+            predictions.append('class-1')
+        elif class2 == 1.0:
+            predictions.append('class-2')
+        else:
+            predictions.append('class-3')
+        actual.append(row[4])
+    print("one vs many accuracy is" , calculateAccuracy(predictions,actual))
+    
+    
+oneVsRest()
+    
+            
